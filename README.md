@@ -2,7 +2,7 @@
 
 A donation app built on a 3D map of the real Earth. Glowing zones mark places
 where people need help. Tap a zone to read what's happening there and donate
-€1, €10 or €20.
+meals: 1, 5 or 25 at a time.
 
 > **Prototype.** The zones in `zones.js` are sample data, and donations are
 > simulated: no money is charged. Totals are kept only in your own browser.
@@ -18,8 +18,9 @@ step, no API keys.
 - **Crisis zones** on the globe, coloured by severity (critical, severe,
   elevated). Tap a marker or area, or open the **Zones** list.
 - **Zone details:** what the problem is and what donations pay for.
-- **Donate €1 / €10 / €20** with a confirm step and a thank-you, plus a running
-  total of what you've given (demo mode).
+- **Donate meals** (1 meal €0.80, 5 meals €4.00, 25 meals €20.00) with a
+  confirm step and a thank-you, plus a running total of meals and euros given
+  (demo mode).
 - **Globe → block zoom.** Scroll, pinch or use the +/− buttons. Right-drag (or
   two-finger drag) tilts the camera.
 - **Three map styles:** Satellite (Esri World Imagery), Hybrid (satellite with
@@ -53,6 +54,14 @@ Source** and pick **GitHub Actions**, then re-run the workflow from the
 Each zone in `zones.js` has a name, region, centre (longitude, latitude),
 radius in km, severity, a short issue label, a summary and a list of needs. Add,
 remove or edit entries and the map and list update automatically.
+
+## Meal price
+
+The example price is €0.80 per meal, based on WFP's ShareTheMeal app, which
+uses US$0.80 to feed a child for a day. Change `DEFAULT_MEAL_COST_CENTS` and
+`MEAL_OPTIONS` at the top of `app.js`, or give a zone its own price with
+`mealCostCents` in `zones.js`. The real figure should come from the partner
+organisation.
 
 ## Going from demo to real donations
 

@@ -357,15 +357,20 @@ button:focus-visible, input:focus-visible {
 .amounts { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
 
 .amount {
-  padding: 14px 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  padding: 11px 4px;
   border-radius: 10px;
   background: var(--give);
   color: var(--give-ink);
-  font-size: 18px;
-  font-weight: 600;
   font-variant-numeric: tabular-nums;
   transition: transform 0.1s ease, filter 0.1s ease;
 }
+
+.amount-meals { font-size: 16px; font-weight: 600; white-space: nowrap; }
+.amount-price { font-size: 13px; font-weight: 500; opacity: 0.75; }
 
 .amount:hover { filter: brightness(1.08); }
 .amount:active { transform: scale(0.97); }

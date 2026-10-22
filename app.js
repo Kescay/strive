@@ -11,7 +11,11 @@
   const isPhone = () => window.innerWidth <= 640;
 
   const ZONES = window.STRIVE_ZONES || [];
-  const DONATION_AMOUNTS = [1, 10, 20];
+  // Donations are offered as meals. Example price: WFP's ShareTheMeal app uses
+  // US$0.80 to feed a child for a day. Replace with the partner's real figure;
+  // a zone can override it with `mealCostCents` (food costs differ by country).
+  const MEAL_OPTIONS = [1, 5, 25];
+  const DEFAULT_MEAL_COST_CENTS = 80;
   const SEVERITY = {
     critical: { label: 'Critical', color: '#ff5a5f', rank: 0 },
     severe: { label: 'Severe', color: '#ff9f43', rank: 1 },
@@ -218,7 +222,8 @@
   });
 
   // ---- Donations (demo: stored only in this browser) ----
-  const STORAGE_KEY = 'strive.donations';
+  // Money is kept in whole cents so totals never pick up floating-point dust.
+  const STORAGE_KEY = 'strive.donations.v2'; // { zoneId: { meals, cents } }
 
   function loadDonations() {
     try {
@@ -230,8 +235,9 @@
 
   const donations = loadDonations();
 
-  function recordDonation(zoneId, amount) {
-    donations[zoneId] = (donations[zoneId] || 0) + amount;
+  function recordDonation(zoneId, meals, cents) {
+    const d = donations[zoneId] || { meals: 0, cents: 0 };
+    donations[zoneId] = { meals: d.meals + meals, cents: d.cents + cents };
     try {
       localStorage.setItem(STORAGE_KEY, JSON.stringify(donations));
     } catch {
@@ -239,15 +245,20 @@
     }
   }
 
-  const totalGiven = () => Object.values(donations).reduce((a, b) => a + b, 0);
-  const euro = new Intl.NumberFormat(navigator.language || 'en', { style: 'currency', currency: 'EUR', maximumFractionDigits: 0 });
+  const totalGiven = () => Object.values(donations).reduce(
+    (t, d) => ({ meals: t.meals + d.meals, cents: t.cents + d.cents }), { meals: 0, cents: 0 });
+  const mealCost = (zone) => zone.mealCostCents ?? DEFAULT_MEAL_COST_CENTS;
+  const euroFormat = new Intl.NumberFormat(navigator.language || 'en', { style: 'currency', currency: 'EUR' });
+  const euro = (cents) => euroFormat.format(cents / 100);
+  const mealsText = (n) => `${n} ${n === 1 ? 'meal' : 'meals'}`;
+  const givenText = (d) => `${mealsText(d.meals)} (${euro(d.cents)})`;
 
   // ---- Zone panel ----
   const panel = document.getElementById('panel');
   const panelBody = document.getElementById('panel-body');
   const hint = document.getElementById('hint');
   let panelView = null; // 'list' | 'zone'
-  let donateState = { step: 'choose', amount: 0 };
+  let donateState = { step: 'choose', meals: 0 };
 
   const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
   const zoneById = (id) => ZONES.find((z) => z.id === id);
@@ -287,13 +298,13 @@
     panelBody.innerHTML = `
       <h2>Zones needing help</h2>
       <p class="muted">${ZONES.length} zones. Tap one to see what's happening and donate.</p>
-      ${given ? `<p class="given">You've given ${euro.format(given)} in total.</p>` : ''}
+      ${given.meals ? `<p class="given">You've given ${givenText(given)} in total.</p>` : ''}
       <ul class="zone-list">
         ${sorted.map((z) => `
           <li><button type="button" data-zone="${esc(z.id)}">
             <span class="zone-dot" style="--sev:${SEVERITY[z.severity].color}"></span>
             <span class="zone-name">${esc(z.name)}<small>${esc(z.region)} · ${esc(z.issue)}</small></span>
-            ${donations[z.id] ? `<span class="zone-given">${euro.format(donations[z.id])}</span>` : ''}
+            ${donations[z.id] ? `<span class="zone-given">${mealsText(donations[z.id].meals)}</span>` : ''}
           </button></li>`).join('')}
       </ul>`;
     panelBody.querySelectorAll('[data-zone]').forEach((b) => b.addEventListener('click', () => selectZone(b.dataset.zone)));
@@ -306,7 +317,7 @@
     if (!zone) return;
     stopSpin();
     setSelected(id);
-    donateState = { step: 'choose', amount: 0 };
+    donateState = { step: 'choose', meals: 0 };
     panelView = 'zone';
     renderZone(zone);
     openPanel();
@@ -320,12 +331,13 @@
   }
 
   function donateSection(zone) {
-    const { step, amount } = donateState;
+    const { step, meals } = donateState;
+    const price = euro(meals * mealCost(zone));
     if (step === 'confirm') {
       return `
-        <p class="confirm-text">Donate <strong>${euro.format(amount)}</strong> to ${esc(zone.name)}?</p>
+        <p class="confirm-text">Give <strong>${mealsText(meals)}</strong> to ${esc(zone.name)} for <strong>${price}</strong>?</p>
         <div class="confirm-row">
-          <button type="button" class="btn-primary" data-act="pay">Donate ${euro.format(amount)}</button>
+          <button type="button" class="btn-primary" data-act="pay">Donate ${price}</button>
           <button type="button" class="btn-ghost" data-act="cancel">Cancel</button>
         </div>`;
     }
@@ -336,18 +348,22 @@
       return `
         <div class="thanks" role="status">
           <strong>Thank you!</strong>
-          <span>${euro.format(amount)} for ${esc(zone.name)}.</span>
+          <span>${mealsText(meals)} (${price}) for ${esc(zone.name)}.</span>
         </div>
         <button type="button" class="btn-ghost" data-act="again">Donate again</button>`;
     }
     return `
       <div class="amounts">
-        ${DONATION_AMOUNTS.map((a) => `<button type="button" class="amount" data-amount="${a}">${euro.format(a)}</button>`).join('')}
+        ${MEAL_OPTIONS.map((n) => `
+          <button type="button" class="amount" data-meals="${n}">
+            <span class="amount-meals">${mealsText(n)}</span>
+            <span class="amount-price">${euro(n * mealCost(zone))}</span>
+          </button>`).join('')}
       </div>`;
   }
 
   function renderZone(zone) {
-    const given = donations[zone.id] || 0;
+    const given = donations[zone.id];
     panelBody.innerHTML = `
       <button type="button" class="back" data-act="list">← All zones</button>
       <div class="zone-meta">${sevChip(zone)}<span class="issue">${esc(zone.issue)}</span></div>
@@ -359,12 +375,12 @@
       <section class="donate" aria-label="Donate">
         <h3>Donate</h3>
         ${donateSection(zone)}
-        <p class="demo-note">Demo mode: no money is charged.</p>
+        <p class="demo-note">Demo mode: no money is charged. Example price of ${euro(mealCost(zone))} per meal.</p>
       </section>
-      ${given ? `<p class="given">You've given ${euro.format(given)} to ${esc(zone.name)}.</p>` : ''}`;
+      ${given ? `<p class="given">You've given ${givenText(given)} to ${esc(zone.name)}.</p>` : ''}`;
 
-    panelBody.querySelectorAll('[data-amount]').forEach((b) => b.addEventListener('click', () => {
-      donateState = { step: 'confirm', amount: Number(b.dataset.amount) };
+    panelBody.querySelectorAll('[data-meals]').forEach((b) => b.addEventListener('click', () => {
+      donateState = { step: 'confirm', meals: Number(b.dataset.meals) };
       renderZone(zone);
       panelBody.querySelector('[data-act="pay"]').focus();
     }));
@@ -372,7 +388,7 @@
       const act = b.dataset.act;
       if (act === 'list') { showList(); return; }
       if (act === 'cancel' || act === 'again') {
-        donateState = { step: 'choose', amount: 0 };
+        donateState = { step: 'choose', meals: 0 };
         renderZone(zone);
         return;
       }
@@ -381,7 +397,7 @@
         donateState.step = 'processing';
         renderZone(zone);
         setTimeout(() => {
-          recordDonation(zone.id, donateState.amount);
+          recordDonation(zone.id, donateState.meals, donateState.meals * mealCost(zone));
           donateState.step = 'thanks';
           if (panelView === 'zone' && selectedId === zone.id) renderZone(zone);
         }, 700);
