@@ -430,6 +430,17 @@ button:focus-visible, input:focus-visible {
 
 .notify-note { font-size: 13px; color: var(--ink-dim); }
 
+.credit-chip {
+  padding: 8px 10px;
+  border-radius: 8px;
+  font-size: 13px;
+  background: rgba(111, 195, 255, 0.12);
+  border: 1px solid rgba(111, 195, 255, 0.3);
+}
+
+.credit-chip strong { color: var(--accent); }
+.thanks .muted { color: var(--ink-dim); font-size: 13px; }
+
 /* In-app notification banners (used when system notifications are off) */
 .toasts {
   position: absolute;

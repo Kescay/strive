@@ -25,7 +25,7 @@ self.addEventListener('message', (event) => {
 self.addEventListener('notificationclick', (event) => {
   event.notification.close();
   const zone = event.notification.data && event.notification.data.zone;
-  const url = new URL(zone ? `./?zone=${encodeURIComponent(zone)}` : './', self.registration.scope).href;
+  const url = new URL(zone ? `./?zone=${encodeURIComponent(zone)}` : './?zones', self.registration.scope).href;
   event.waitUntil((async () => {
     const windows = await self.clients.matchAll({ type: 'window', includeUncontrolled: true });
     const open = windows.find((c) => 'focus' in c);

@@ -253,6 +253,28 @@
   const mealsText = (n) => `${n} ${n === 1 ? 'meal' : 'meals'}`;
   const givenText = (d) => `${mealsText(d.meals)} (${euro(d.cents)})`;
 
+  // Sponsor credit: money a company gives the user that can only be spent on
+  // donations in the app (it never goes to the user's own pocket).
+  const SPONSOR = { company: 'Company X', cents: 5000 };
+  const CREDIT_KEY = 'strive.credit';
+  let creditCents = 0;
+  try {
+    creditCents = Number(localStorage.getItem(CREDIT_KEY)) || 0;
+  } catch {
+    // Storage unavailable: credit lasts for this visit only.
+  }
+
+  function setCredit(cents) {
+    creditCents = cents;
+    try {
+      localStorage.setItem(CREDIT_KEY, String(cents));
+    } catch {
+      // See above.
+    }
+  }
+
+  const creditChip = (text) => `<p class="credit-chip">${text}</p>`;
+
   // ---- Zone panel ----
   const panel = document.getElementById('panel');
   const panelBody = document.getElementById('panel-body');
@@ -298,6 +320,7 @@
     panelBody.innerHTML = `
       <h2>Zones needing help</h2>
       <p class="muted">${ZONES.length} zones. Tap one to see what's happening and donate.</p>
+      ${creditCents ? creditChip(`You have <strong>${euro(creditCents)}</strong> of ${SPONSOR.company} credit to donate.`) : ''}
       ${given.meals ? `<p class="given">You've given ${givenText(given)} in total.</p>` : ''}
       <ul class="zone-list">
         ${sorted.map((z) => `
@@ -332,10 +355,12 @@
 
   function donateSection(zone) {
     const { step, meals } = donateState;
-    const price = euro(meals * mealCost(zone));
+    const cents = meals * mealCost(zone);
+    const price = euro(cents);
     if (step === 'confirm') {
       return `
         <p class="confirm-text">Give <strong>${mealsText(meals)}</strong> to ${esc(zone.name)} for <strong>${price}</strong>?</p>
+        ${creditCents >= cents ? creditChip(`Paid from your ${SPONSOR.company} credit (${euro(creditCents)} available).`) : ''}
         <div class="confirm-row">
           <button type="button" class="btn-primary" data-act="pay">Donate ${price}</button>
           <button type="button" class="btn-ghost" data-act="cancel">Cancel</button>
@@ -349,11 +374,13 @@
         <div class="thanks" role="status">
           <strong>Thank you!</strong>
           <span>${mealsText(meals)} (${price}) for ${esc(zone.name)}.</span>
+          ${donateState.paidWithCredit ? `<span class="muted">Paid with ${SPONSOR.company} credit. ${euro(creditCents)} left.</span>` : ''}
         </div>
         ${notifyOptIn()}
         <button type="button" class="btn-ghost" data-act="again">Donate again</button>`;
     }
     return `
+      ${creditCents ? creditChip(`${SPONSOR.company} credit: <strong>${euro(creditCents)}</strong>`) : ''}
       <div class="amounts">
         ${MEAL_OPTIONS.map((n) => `
           <button type="button" class="amount" data-meals="${n}">
@@ -402,12 +429,15 @@
       if (act === 'pay') {
         // Placeholder for a real payment provider (e.g. a Stripe Checkout session).
         const { meals } = donateState;
+        const cents = meals * mealCost(zone);
+        const paidWithCredit = creditCents >= cents;
         donateState.step = 'processing';
         renderZone(zone);
         setTimeout(() => {
-          recordDonation(zone.id, meals, meals * mealCost(zone));
+          if (paidWithCredit) setCredit(creditCents - cents);
+          recordDonation(zone.id, meals, cents);
           scheduleDonationUpdates(zone, meals);
-          donateState.step = 'thanks';
+          donateState = { step: 'thanks', meals, paidWithCredit };
           if (panelView === 'zone' && selectedId === zone.id) renderZone(zone);
         }, 700);
       }
@@ -418,8 +448,7 @@
   // The page schedules the notifications itself. With permission they are real
   // system notifications shown by the service worker; otherwise they appear as
   // in-app banners. A real version would send them from a server via Web Push.
-  const DEMO_DELAYS = { delivered: 10000, reward: 20000 };
-  const REWARD = { company: 'Company X', amount: '€50' };
+  const DEMO_DELAYS = { delivered: 10000, sponsor: 20000 };
   const isIos = /iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
   const isStandalone = window.matchMedia('(display-mode: standalone)').matches || navigator.standalone === true;
   let notifySupported = 'Notification' in window && 'serviceWorker' in navigator;
@@ -428,7 +457,9 @@
   if ('serviceWorker' in navigator) {
     navigator.serviceWorker.register('sw.js').catch(() => { notifySupported = false; });
     navigator.serviceWorker.addEventListener('message', (e) => {
-      if (e.data && e.data.type === 'open-zone' && e.data.zone) selectZone(e.data.zone);
+      if (!e.data || e.data.type !== 'open-zone') return;
+      if (e.data.zone) selectZone(e.data.zone);
+      else showList();
     });
   }
 
@@ -462,12 +493,31 @@
       title: `Update from ${zone.name}`,
       body: `The food distribution you helped fund has reached families in ${zone.name}. Thank you for your ${mealsText(meals)}! (Demo)`,
     }, DEMO_DELAYS.delivered);
+
+    // The sponsor tops you up once your credit is used up (once at a time).
+    if (creditCents > 0 || sponsorPending) return;
+    sponsorPending = true;
+    const amount = euro(SPONSOR.cents);
     scheduleNotification({
-      tag: 'reward',
-      zone: zone.id,
-      title: `${REWARD.company} rewarded you`,
-      body: `${REWARD.company} has given you ${REWARD.amount} for donating. (Demo)`,
-    }, DEMO_DELAYS.reward);
+      tag: 'sponsor',
+      zone: null,
+      title: `${SPONSOR.company} gave you ${amount} to donate`,
+      body: `Thanks for giving! ${SPONSOR.company} has given you ${amount} to donate to people in need. Tap to choose where it goes. (Demo)`,
+    }, DEMO_DELAYS.sponsor);
+    setTimeout(() => {
+      sponsorPending = false;
+      setCredit(creditCents + SPONSOR.cents);
+      refreshPanel();
+    }, DEMO_DELAYS.sponsor);
+  }
+
+  let sponsorPending = false;
+
+  // Re-render the open panel so new credit shows, unless mid-checkout.
+  function refreshPanel() {
+    if (panel.hidden) return;
+    if (panelView === 'list') showList();
+    else if (panelView === 'zone' && !['confirm', 'processing'].includes(donateState.step)) renderZone(zoneById(selectedId));
   }
 
   async function enableNotifications() {
@@ -515,13 +565,17 @@
       clearTimeout(timer);
       el.remove();
       if (n.zone) selectZone(n.zone);
+      else showList();
     });
     toasts.append(el);
   }
 
-  // Tapping a notification while the app is closed opens it at ?zone=<id>.
-  const startZone = new URLSearchParams(window.location.search).get('zone');
+  // Tapping a notification while the app is closed opens it at ?zone=<id>,
+  // or at ?zones for the zone list.
+  const params = new URLSearchParams(window.location.search);
+  const startZone = params.get('zone');
   if (startZone && zoneById(startZone)) map.once('load', () => selectZone(startZone));
+  else if (params.has('zones')) map.once('load', showList);
 
   // ---- Search (OpenStreetMap Nominatim) ----
   const searchForm = document.getElementById('search');

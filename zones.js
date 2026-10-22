@@ -2,6 +2,9 @@
 // long-running humanitarian situations, not live data. In production this list
 // would come from a partner organisation or a feed such as ReliefWeb.
 //
+// `needs` lists only the kinds of help WFP provides: food rations, cash and
+// vouchers for food, nutrition treatment, school meals and food for work.
+//
 // severity: 'critical' | 'severe' | 'elevated'
 // center: [longitude, latitude], radiusKm: rough size of the affected area
 window.STRIVE_ZONES = [
@@ -14,7 +17,7 @@ window.STRIVE_ZONES = [
     severity: 'critical',
     issue: 'Conflict and hunger',
     summary: 'Fighting has forced families from their homes and cut off markets and farmland. Many displaced households rely on outside food aid to get through each week.',
-    needs: ['Emergency food rations', 'Clean drinking water', 'Treatment for malnourished children'],
+    needs: ['Emergency food rations', 'Nutrition treatment for malnourished children', 'Cash to buy food where markets still work'],
   },
   {
     id: 'north-kivu',
@@ -25,7 +28,7 @@ window.STRIVE_ZONES = [
     severity: 'critical',
     issue: 'Conflict and displacement',
     summary: 'Renewed fighting has displaced large numbers of people, many now living in crowded sites around Goma. Food, water and medical care are all in short supply.',
-    needs: ['Emergency food', 'Clean water', 'Basic medical care'],
+    needs: ['Emergency food rations for displaced families', 'High-energy biscuits for new arrivals', 'Nutrition support for young children and mothers'],
   },
   {
     id: 'port-au-prince',
@@ -36,7 +39,7 @@ window.STRIVE_ZONES = [
     severity: 'critical',
     issue: 'Violence and food shortages',
     summary: 'Armed groups control roads in and around the capital, disrupting food deliveries and pushing prices up. Displaced families are sheltering in schools and public buildings.',
-    needs: ['Hot meals and food kits', 'Hygiene supplies', 'Shelter support'],
+    needs: ['Hot meals for displaced families', 'Monthly food kits', 'School meals'],
   },
   {
     id: 'hodeidah',
@@ -47,7 +50,7 @@ window.STRIVE_ZONES = [
     severity: 'severe',
     issue: 'Food insecurity',
     summary: 'Years of conflict and economic collapse have left many families unable to afford basic food. Malnutrition among young children remains high.',
-    needs: ['Monthly food baskets', 'Nutrition supplements for children', 'Water purification'],
+    needs: ['Monthly food baskets', 'Nutrition treatment for young children', 'Cash to buy food at local markets'],
   },
   {
     id: 'central-sahel',
@@ -58,7 +61,7 @@ window.STRIVE_ZONES = [
     severity: 'severe',
     issue: 'Drought and displacement',
     summary: 'Erratic rains and insecurity have hit harvests and herds. Families who fled violence have lost access to their fields.',
-    needs: ['Food rations', 'Seeds and tools for the next season', 'Livestock feed'],
+    needs: ['Food rations for displaced families', 'Food for work restoring farmland', 'School meals'],
   },
   {
     id: 'bay-region',
@@ -69,7 +72,7 @@ window.STRIVE_ZONES = [
     severity: 'severe',
     issue: 'Drought',
     summary: 'Failed rainy seasons have dried up water points and killed livestock, the main source of income for many families. Displacement camps around towns keep growing.',
-    needs: ['Water trucking', 'Food and cash assistance', 'Malnutrition treatment'],
+    needs: ['Emergency food rations', 'Cash to buy food at local markets', 'Nutrition treatment for young children'],
   },
   {
     id: 'central-highlands',
@@ -80,7 +83,7 @@ window.STRIVE_ZONES = [
     severity: 'severe',
     issue: 'Hunger and harsh winter',
     summary: 'Economic hardship means many families cannot afford enough food, and winter cuts off mountain villages for months. Aid has to be in place before the snow arrives.',
-    needs: ['Winter food stocks', 'Warm clothing and blankets', 'Fuel for heating'],
+    needs: ['Food stocked in villages before winter', 'Nutrition support for mothers and young children', 'Cash to buy food at local markets'],
   },
   {
     id: 'coxs-bazar',
@@ -91,7 +94,7 @@ window.STRIVE_ZONES = [
     severity: 'elevated',
     issue: 'Refugee camps',
     summary: 'Close to a million Rohingya refugees live in crowded camps that depend almost entirely on aid. Monsoon storms regularly damage shelters.',
-    needs: ['Food assistance', 'Shelter repair kits', 'Clean water and sanitation'],
+    needs: ['Food vouchers for camp shops', 'Nutrition support for young children and mothers', 'Fortified snacks in learning centres'],
   },
   {
     id: 'sindh',
@@ -102,7 +105,7 @@ window.STRIVE_ZONES = [
     severity: 'elevated',
     issue: 'Flood recovery',
     summary: 'Monsoon floods regularly submerge farmland and villages across the Indus plain. Families are still rebuilding homes and livelihoods after recent floods.',
-    needs: ['Food rations', 'Rebuilding materials', 'Seeds for replanting'],
+    needs: ['Food rations for flood-hit families', 'Food for work rebuilding canals and roads', 'Cash to buy food at local markets'],
   },
   {
     id: 'southern-malawi',
@@ -113,6 +116,6 @@ window.STRIVE_ZONES = [
     severity: 'elevated',
     issue: 'Drought and failed harvests',
     summary: "A poor rainy season cut maize harvests, the region's staple food. Families are running out of stored food months before the next harvest.",
-    needs: ['Maize and food rations', 'School meals', 'Drought-resistant seeds'],
+    needs: ['Food rations until the next harvest', 'School meals', 'Cash to buy food at local markets'],
   },
 ];

@@ -21,8 +21,11 @@ step, no API keys.
 - **Donate meals** (1 meal €0.80, 5 meals €4.00, 25 meals €20.00) with a
   confirm step and a thank-you, plus a running total of meals and euros given
   (demo mode).
+- **Sponsor credit:** after a donation, Company X gives the user €50 that can
+  only be spent on donations. The balance pays for the next donations and a
+  new top-up arrives once it's used up (demo).
 - **Demo notifications** after each donation: a delivery update after 10 s and
-  a "Company X has given you €50" reward after 20 s. With notifications
+  the "Company X gave you €50 to donate" message after 20 s. With notifications
   allowed they are real system notifications; otherwise in-app banners.
 - **Installable app** (Add to Home Screen) with its own icon.
 - **Globe → block zoom.** Scroll, pinch or use the +/− buttons. Right-drag (or
@@ -56,8 +59,17 @@ Source** and pick **GitHub Actions**, then re-run the workflow from the
 ## Editing zones
 
 Each zone in `zones.js` has a name, region, centre (longitude, latitude),
-radius in km, severity, a short issue label, a summary and a list of needs. Add,
+radius in km, severity, a short issue label, a summary and a list of needs.
+Needs are limited to the kinds of help WFP provides: food rations, cash and
+vouchers for food, nutrition treatment, school meals and food for work. Add,
 remove or edit entries and the map and list update automatically.
+
+## Sponsor credit
+
+`SPONSOR` near the top of `app.js` sets the company name and the amount (in
+cents). The credit is stored in the browser and can only pay for donations. A
+donation uses it when the balance covers the whole price; otherwise it's paid
+normally.
 
 ## Meal price
 
@@ -79,7 +91,7 @@ phone within the delay. Tapping one opens the app at that zone.
   it from there, then allow notifications. In a normal Safari tab you get the
   in-app banners instead.
 
-Delays, the reward company and the amount are set at the top of the
+Delays are set at the top of the
 "Demo notifications" section in `app.js`. Real notifications would be sent from
 a server with Web Push (for example PHP on a web hotel).
 
