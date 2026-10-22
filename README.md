@@ -21,11 +21,12 @@ step, no API keys.
 - **Donate meals** (1 meal €0.80, 5 meals €4.00, 25 meals €20.00) with a
   confirm step and a thank-you, plus a running total of meals and euros given
   (demo mode).
-- **Sponsor credit:** after a donation, Company X gives the user €50 that can
-  only be spent on donations. The balance pays for the next donations and a
-  new top-up arrives once it's used up (demo).
+- **Sponsor offers:** after a donation, Company X offers the user €5 of credit
+  that can only be spent on donations. A popup asks them to claim or reject it
+  within 5 hours. Claimed credit pays for all or part of the next donations
+  (demo).
 - **Demo notifications** after each donation: a delivery update after 10 s and
-  the "Company X gave you €50 to donate" message after 20 s. With notifications
+  the sponsor offer after 20 s. With notifications
   allowed they are real system notifications; otherwise in-app banners.
 - **Installable app** (Add to Home Screen) with its own icon.
 - **Globe → block zoom.** Scroll, pinch or use the +/− buttons. Right-drag (or
@@ -64,12 +65,20 @@ Needs are limited to the kinds of help WFP provides: food rations, cash and
 vouchers for food, nutrition treatment, school meals and food for work. Add,
 remove or edit entries and the map and list update automatically.
 
-## Sponsor credit
+## Sponsor offers
 
-`SPONSOR` near the top of `app.js` sets the company name and the amount (in
-cents). The credit is stored in the browser and can only pay for donations. A
-donation uses it when the balance covers the whole price; otherwise it's paid
-normally.
+`SPONSOR` near the top of `app.js` sets the company name, the amount (in cents)
+and how many hours the offer stays open. The flow:
+
+1. After a donation (when the user has no credit and no open offer), a
+   notification says the company wants to fund their next donation.
+2. A popup offers **Claim** or **No thanks**, with a countdown. Closing it
+   means "decide later": the offer stays in the Zones list and the popup comes
+   back whenever the app is opened, until it expires.
+3. Claimed credit is spent first on later donations, covering all or part of
+   the price.
+
+Offer and credit are stored in the browser only.
 
 ## Meal price
 

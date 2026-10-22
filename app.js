@@ -255,8 +255,8 @@
 
   // Sponsor credit: money a company gives the user that can only be spent on
   // donations in the app (it never goes to the user's own pocket).
-  const SPONSOR = { company: 'Company X', cents: 5000 };
-  const CREDIT_KEY = 'strive.credit';
+  const SPONSOR = { company: 'Company X', cents: 500, offerHours: 5 };
+  const CREDIT_KEY = 'strive.credit.v2';
   let creditCents = 0;
   try {
     creditCents = Number(localStorage.getItem(CREDIT_KEY)) || 0;
@@ -274,6 +274,41 @@
   }
 
   const creditChip = (text) => `<p class="credit-chip">${text}</p>`;
+
+  // The sponsor first *offers* the credit; the user claims or rejects it before
+  // it expires. Stored as { cents, expiresAt, status: 'open'|'claimed'|'rejected' }.
+  const OFFER_KEY = 'strive.offer';
+  let offer = null;
+  try {
+    offer = JSON.parse(localStorage.getItem(OFFER_KEY));
+  } catch {
+    // Storage unavailable: the offer lasts for this visit only.
+  }
+
+  function saveOffer(next) {
+    offer = next;
+    try {
+      localStorage.setItem(OFFER_KEY, JSON.stringify(next));
+    } catch {
+      // See above.
+    }
+  }
+
+  const offerOpen = () => Boolean(offer && offer.status === 'open' && Date.now() < offer.expiresAt);
+
+  function timeLeft(ms) {
+    const mins = Math.floor(ms / 60000);
+    if (mins < 1) return 'less than a minute';
+    const h = Math.floor(mins / 60);
+    const m = mins % 60;
+    return h ? `${h} h ${m} min` : `${m} min`;
+  }
+
+  // Splits a price into what the sponsor credit covers and what the user pays.
+  function splitPrice(cents) {
+    const fromCredit = Math.min(creditCents, cents);
+    return { fromCredit, fromUser: cents - fromCredit };
+  }
 
   // ---- Zone panel ----
   const panel = document.getElementById('panel');
@@ -305,7 +340,9 @@
   }
 
   document.getElementById('panel-close').addEventListener('click', closePanel);
-  document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && !panel.hidden) closePanel(); });
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && !panel.hidden && offerModal.hidden) closePanel();
+  });
 
   function sevChip(zone) {
     const s = SEVERITY[zone.severity];
@@ -320,6 +357,7 @@
     panelBody.innerHTML = `
       <h2>Zones needing help</h2>
       <p class="muted">${ZONES.length} zones. Tap one to see what's happening and donate.</p>
+      ${offerOpen() ? `<p class="credit-chip offer-chip">${SPONSOR.company} is offering you <strong>${euro(offer.cents)}</strong> to donate. <button type="button" class="link-btn" data-act="offer">View offer</button></p>` : ''}
       ${creditCents ? creditChip(`You have <strong>${euro(creditCents)}</strong> of ${SPONSOR.company} credit to donate.`) : ''}
       ${given.meals ? `<p class="given">You've given ${givenText(given)} in total.</p>` : ''}
       <ul class="zone-list">
@@ -331,6 +369,7 @@
           </button></li>`).join('')}
       </ul>`;
     panelBody.querySelectorAll('[data-zone]').forEach((b) => b.addEventListener('click', () => selectZone(b.dataset.zone)));
+    panelBody.querySelector('[data-act="offer"]')?.addEventListener('click', () => showOffer());
     openPanel();
     panelBody.scrollTop = 0;
   }
@@ -353,6 +392,13 @@
     map.fitBounds(zoneBounds(zone), { padding, maxZoom: 11, pitch: 0, bearing: 0, essential: true });
   }
 
+  function creditNote(cents) {
+    const { fromCredit, fromUser } = splitPrice(cents);
+    if (!fromCredit) return '';
+    if (!fromUser) return creditChip(`Paid from your ${SPONSOR.company} credit (${euro(creditCents)} available).`);
+    return creditChip(`${SPONSOR.company} credit pays <strong>${euro(fromCredit)}</strong>. You pay ${euro(fromUser)}.`);
+  }
+
   function donateSection(zone) {
     const { step, meals } = donateState;
     const cents = meals * mealCost(zone);
@@ -360,7 +406,7 @@
     if (step === 'confirm') {
       return `
         <p class="confirm-text">Give <strong>${mealsText(meals)}</strong> to ${esc(zone.name)} for <strong>${price}</strong>?</p>
-        ${creditCents >= cents ? creditChip(`Paid from your ${SPONSOR.company} credit (${euro(creditCents)} available).`) : ''}
+        ${creditNote(cents)}
         <div class="confirm-row">
           <button type="button" class="btn-primary" data-act="pay">Donate ${price}</button>
           <button type="button" class="btn-ghost" data-act="cancel">Cancel</button>
@@ -374,7 +420,7 @@
         <div class="thanks" role="status">
           <strong>Thank you!</strong>
           <span>${mealsText(meals)} (${price}) for ${esc(zone.name)}.</span>
-          ${donateState.paidWithCredit ? `<span class="muted">Paid with ${SPONSOR.company} credit. ${euro(creditCents)} left.</span>` : ''}
+          ${donateState.fromCredit ? `<span class="muted">${SPONSOR.company} credit paid ${euro(donateState.fromCredit)}. ${euro(creditCents)} left.</span>` : ''}
         </div>
         ${notifyOptIn()}
         <button type="button" class="btn-ghost" data-act="again">Donate again</button>`;
@@ -430,14 +476,14 @@
         // Placeholder for a real payment provider (e.g. a Stripe Checkout session).
         const { meals } = donateState;
         const cents = meals * mealCost(zone);
-        const paidWithCredit = creditCents >= cents;
+        const { fromCredit } = splitPrice(cents);
         donateState.step = 'processing';
         renderZone(zone);
         setTimeout(() => {
-          if (paidWithCredit) setCredit(creditCents - cents);
+          if (fromCredit) setCredit(creditCents - fromCredit);
           recordDonation(zone.id, meals, cents);
           scheduleDonationUpdates(zone, meals);
-          donateState = { step: 'thanks', meals, paidWithCredit };
+          donateState = { step: 'thanks', meals, fromCredit };
           if (panelView === 'zone' && selectedId === zone.id) renderZone(zone);
         }, 700);
       }
@@ -457,9 +503,7 @@
   if ('serviceWorker' in navigator) {
     navigator.serviceWorker.register('sw.js').catch(() => { notifySupported = false; });
     navigator.serviceWorker.addEventListener('message', (e) => {
-      if (!e.data || e.data.type !== 'open-zone') return;
-      if (e.data.zone) selectZone(e.data.zone);
-      else showList();
+      if (e.data && e.data.type === 'open') openLink(e.data.link);
     });
   }
 
@@ -489,29 +533,31 @@
   function scheduleDonationUpdates(zone, meals) {
     scheduleNotification({
       tag: `delivered-${zone.id}`,
-      zone: zone.id,
+      link: `zone=${zone.id}`,
       title: `Update from ${zone.name}`,
       body: `The food distribution you helped fund has reached families in ${zone.name}. Thank you for your ${mealsText(meals)}! (Demo)`,
     }, DEMO_DELAYS.delivered);
 
-    // The sponsor tops you up once your credit is used up (once at a time).
-    if (creditCents > 0 || sponsorPending) return;
-    sponsorPending = true;
+    // A new sponsor offer comes once the user has no credit and no open offer.
+    if (creditCents > 0 || offerOpen() || offerPending) return;
+    offerPending = true;
     const amount = euro(SPONSOR.cents);
     scheduleNotification({
-      tag: 'sponsor',
-      zone: null,
-      title: `${SPONSOR.company} gave you ${amount} to donate`,
-      body: `Thanks for giving! ${SPONSOR.company} has given you ${amount} to donate to people in need. Tap to choose where it goes. (Demo)`,
+      tag: 'sponsor-offer',
+      link: 'offer',
+      title: `${SPONSOR.company} wants to fund your next donation`,
+      body: `Claim ${amount} of sponsor credit to donate to a zone of your choice. Offer ends in ${SPONSOR.offerHours} hours. (Demo)`,
     }, DEMO_DELAYS.sponsor);
     setTimeout(() => {
-      sponsorPending = false;
-      setCredit(creditCents + SPONSOR.cents);
+      offerPending = false;
+      saveOffer({ cents: SPONSOR.cents, expiresAt: Date.now() + SPONSOR.offerHours * 3600000, status: 'open' });
       refreshPanel();
+      // Pop the offer up right away if the app is in front and not mid-checkout.
+      if (document.visibilityState === 'visible' && !['confirm', 'processing'].includes(donateState.step)) showOffer();
     }, DEMO_DELAYS.sponsor);
   }
 
-  let sponsorPending = false;
+  let offerPending = false;
 
   // Re-render the open panel so new credit shows, unless mid-checkout.
   function refreshPanel() {
@@ -564,18 +610,92 @@
     el.addEventListener('click', () => {
       clearTimeout(timer);
       el.remove();
-      if (n.zone) selectZone(n.zone);
-      else showList();
+      openLink(n.link);
     });
     toasts.append(el);
   }
 
-  // Tapping a notification while the app is closed opens it at ?zone=<id>,
-  // or at ?zones for the zone list.
-  const params = new URLSearchParams(window.location.search);
-  const startZone = params.get('zone');
-  if (startZone && zoneById(startZone)) map.once('load', () => selectZone(startZone));
-  else if (params.has('zones')) map.once('load', showList);
+  // Notifications carry a link: "zone=<id>", "offer" or "zones".
+  function openLink(link) {
+    const p = new URLSearchParams(link || '');
+    const zone = p.get('zone');
+    if (zone && zoneById(zone)) selectZone(zone);
+    else if (p.has('offer')) showOffer();
+    else if (p.has('zones')) showList();
+  }
+
+  // ---- Sponsor offer popup ----
+  const offerModal = document.getElementById('offer');
+  const offerBody = document.getElementById('offer-body');
+  let offerTimer = null;
+  let offerReturnFocus = null;
+
+  function showOffer() {
+    if (!offer) return;
+    if (offerModal.hidden) offerReturnFocus = document.activeElement;
+    offerModal.hidden = false;
+    renderOffer();
+    offerBody.querySelector('button').focus();
+    clearInterval(offerTimer);
+    offerTimer = setInterval(renderOffer, 30000);
+  }
+
+  function closeOffer() {
+    offerModal.hidden = true;
+    clearInterval(offerTimer);
+    if (offerReturnFocus && offerReturnFocus.focus) offerReturnFocus.focus();
+  }
+
+  function renderOffer() {
+    const amount = euro(offer.cents);
+    if (offerOpen()) {
+      offerBody.innerHTML = `
+        <div class="offer-logo" aria-hidden="true">${esc(SPONSOR.company.charAt(0))}</div>
+        <p class="offer-eyebrow">Sponsor offer</p>
+        <h2 id="offer-title">${esc(SPONSOR.company)} is offering you ${amount} to donate</h2>
+        <p>Claim it and choose which zone it helps. The credit can only be used for donations, and ${esc(SPONSOR.company)} pays it straight to the cause.</p>
+        <p class="offer-timer">Offer ends in <strong>${timeLeft(offer.expiresAt - Date.now())}</strong></p>
+        <div class="offer-actions">
+          <button type="button" class="btn-primary" data-offer="claim">Claim ${amount}</button>
+          <button type="button" class="btn-ghost" data-offer="reject">No thanks</button>
+        </div>
+        <p class="demo-note">Demo: no real money is involved.</p>`;
+    } else {
+      const text = offer.status === 'claimed' ? `You claimed ${amount} of ${esc(SPONSOR.company)} credit.`
+        : offer.status === 'rejected' ? 'You turned this offer down.'
+          : `This ${amount} offer from ${esc(SPONSOR.company)} has ended. A new offer may come after your next donation.`;
+      offerBody.innerHTML = `
+        <h2 id="offer-title">${offer.status === 'open' ? 'This offer has expired' : 'Sponsor offer'}</h2>
+        <p>${text}</p>
+        <div class="offer-actions"><button type="button" class="btn-ghost" data-offer="close">OK</button></div>`;
+    }
+    offerBody.querySelectorAll('[data-offer]').forEach((b) => b.addEventListener('click', () => answerOffer(b.dataset.offer)));
+  }
+
+  function answerOffer(answer) {
+    if (answer === 'claim' && offerOpen()) {
+      saveOffer({ ...offer, status: 'claimed' });
+      setCredit(creditCents + offer.cents);
+      closeOffer();
+      showList();
+      return;
+    }
+    if (answer === 'reject' && offerOpen()) saveOffer({ ...offer, status: 'rejected' });
+    closeOffer();
+    refreshPanel();
+  }
+
+  document.getElementById('offer-close').addEventListener('click', () => { closeOffer(); refreshPanel(); });
+  offerModal.addEventListener('click', (e) => { if (e.target === offerModal) closeOffer(); });
+  document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && !offerModal.hidden) closeOffer(); });
+
+  // Tapping a notification while the app is closed opens it with ?zone=<id>,
+  // ?offer or ?zones. An open offer also pops up whenever the app is opened.
+  const startLink = window.location.search.slice(1);
+  map.once('load', () => {
+    if (startLink) openLink(startLink);
+    if (offerOpen() && offerModal.hidden) showOffer();
+  });
 
   // ---- Search (OpenStreetMap Nominatim) ----
   const searchForm = document.getElementById('search');

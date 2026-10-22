@@ -4,7 +4,8 @@
 self.addEventListener('install', () => self.skipWaiting());
 self.addEventListener('activate', (event) => event.waitUntil(self.clients.claim()));
 
-// The page posts { type: 'schedule', delay, title, body, tag, zone }.
+// The page posts { type: 'schedule', delay, title, body, tag, link }, where
+// link is a query string such as "zone=hodeidah" or "offer".
 // waitUntil keeps the worker alive through the delay, so the notification
 // still appears if the user switches apps or locks the phone meanwhile.
 self.addEventListener('message', (event) => {
@@ -17,20 +18,20 @@ self.addEventListener('message', (event) => {
         tag: n.tag,
         icon: 'icons/icon-192.png',
         badge: 'icons/badge-96.png',
-        data: { zone: n.zone },
+        data: { link: n.link || '' },
       })),
   );
 });
 
 self.addEventListener('notificationclick', (event) => {
   event.notification.close();
-  const zone = event.notification.data && event.notification.data.zone;
-  const url = new URL(zone ? `./?zone=${encodeURIComponent(zone)}` : './?zones', self.registration.scope).href;
+  const link = (event.notification.data && event.notification.data.link) || '';
+  const url = new URL(link ? `./?${link}` : './', self.registration.scope).href;
   event.waitUntil((async () => {
     const windows = await self.clients.matchAll({ type: 'window', includeUncontrolled: true });
     const open = windows.find((c) => 'focus' in c);
     if (open) {
-      open.postMessage({ type: 'open-zone', zone });
+      open.postMessage({ type: 'open', link });
       return open.focus();
     }
     return self.clients.openWindow(url);
