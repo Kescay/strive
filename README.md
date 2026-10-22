@@ -21,6 +21,10 @@ step, no API keys.
 - **Donate meals** (1 meal €0.80, 5 meals €4.00, 25 meals €20.00) with a
   confirm step and a thank-you, plus a running total of meals and euros given
   (demo mode).
+- **Demo notifications** after each donation: a delivery update after 10 s and
+  a "Company X has given you €50" reward after 20 s. With notifications
+  allowed they are real system notifications; otherwise in-app banners.
+- **Installable app** (Add to Home Screen) with its own icon.
 - **Globe → block zoom.** Scroll, pinch or use the +/− buttons. Right-drag (or
   two-finger drag) tilts the camera.
 - **Three map styles:** Satellite (Esri World Imagery), Hybrid (satellite with
@@ -62,6 +66,22 @@ uses US$0.80 to feed a child for a day. Change `DEFAULT_MEAL_COST_CENTS` and
 `MEAL_OPTIONS` at the top of `app.js`, or give a zone its own price with
 `mealCostCents` in `zones.js`. The real figure should come from the partner
 organisation.
+
+## Demo notifications
+
+There is no server: the page schedules the notifications itself and the service
+worker (`sw.js`) shows them, so they also appear if you switch apps or lock the
+phone within the delay. Tapping one opens the app at that zone.
+
+- **Android / desktop:** tap "Notify me when it's delivered" after a donation
+  and allow notifications.
+- **iPhone:** add the app to the Home Screen (Share → Add to Home Screen), open
+  it from there, then allow notifications. In a normal Safari tab you get the
+  in-app banners instead.
+
+Delays, the reward company and the amount are set at the top of the
+"Demo notifications" section in `app.js`. Real notifications would be sent from
+a server with Web Push (for example PHP on a web hotel).
 
 ## Going from demo to real donations
 

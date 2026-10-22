@@ -428,6 +428,50 @@ button:focus-visible, input:focus-visible {
 .zone-name small { color: var(--ink-dim); font-weight: 400; font-size: 12.5px; }
 .zone-given { color: var(--give); font-size: 13px; font-variant-numeric: tabular-nums; }
 
+.notify-note { font-size: 13px; color: var(--ink-dim); }
+
+/* In-app notification banners (used when system notifications are off) */
+.toasts {
+  position: absolute;
+  top: var(--edge-t);
+  left: 50%;
+  transform: translateX(-50%);
+  width: min(380px, calc(100% - var(--edge-l) - var(--edge-r)));
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  z-index: 20;
+  pointer-events: none;
+}
+
+.toast {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 10px 12px;
+  border-radius: 16px;
+  border: 1px solid var(--panel-line);
+  background: var(--panel-solid);
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+  text-align: left;
+  pointer-events: auto;
+  animation: toast-in 0.35s ease-out;
+}
+
+.toast img { width: 38px; height: 38px; border-radius: 9px; flex: none; }
+.toast-text { display: flex; flex-direction: column; gap: 1px; min-width: 0; font-size: 13.5px; }
+.toast-text strong { font-size: 14px; }
+.toast-app { font-size: 11.5px; color: var(--ink-dim); }
+
+@keyframes toast-in {
+  from { transform: translateY(-120%); opacity: 0; }
+  to { transform: none; opacity: 1; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .toast { animation: none; }
+}
+
 /* MapLibre controls restyled to match */
 .maplibregl-ctrl-top-right { top: var(--edge-t); right: var(--edge-r); }
 .maplibregl-ctrl-top-right .maplibregl-ctrl { margin: 0 0 10px; }

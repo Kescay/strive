@@ -350,6 +350,7 @@
           <strong>Thank you!</strong>
           <span>${mealsText(meals)} (${price}) for ${esc(zone.name)}.</span>
         </div>
+        ${notifyOptIn()}
         <button type="button" class="btn-ghost" data-act="again">Donate again</button>`;
     }
     return `
@@ -392,18 +393,135 @@
         renderZone(zone);
         return;
       }
+      if (act === 'notify') {
+        enableNotifications().then(() => {
+          if (panelView === 'zone' && selectedId === zone.id) renderZone(zone);
+        });
+        return;
+      }
       if (act === 'pay') {
         // Placeholder for a real payment provider (e.g. a Stripe Checkout session).
+        const { meals } = donateState;
         donateState.step = 'processing';
         renderZone(zone);
         setTimeout(() => {
-          recordDonation(zone.id, donateState.meals, donateState.meals * mealCost(zone));
+          recordDonation(zone.id, meals, meals * mealCost(zone));
+          scheduleDonationUpdates(zone, meals);
           donateState.step = 'thanks';
           if (panelView === 'zone' && selectedId === zone.id) renderZone(zone);
         }, 700);
       }
     }));
   }
+
+  // ---- Demo notifications (no server) ----
+  // The page schedules the notifications itself. With permission they are real
+  // system notifications shown by the service worker; otherwise they appear as
+  // in-app banners. A real version would send them from a server via Web Push.
+  const DEMO_DELAYS = { delivered: 10000, reward: 20000 };
+  const REWARD = { company: 'Company X', amount: '€50' };
+  const isIos = /iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+  const isStandalone = window.matchMedia('(display-mode: standalone)').matches || navigator.standalone === true;
+  let notifySupported = 'Notification' in window && 'serviceWorker' in navigator;
+  let pending = []; // notifications still waiting on an in-page timer
+
+  if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.register('sw.js').catch(() => { notifySupported = false; });
+    navigator.serviceWorker.addEventListener('message', (e) => {
+      if (e.data && e.data.type === 'open-zone' && e.data.zone) selectZone(e.data.zone);
+    });
+  }
+
+  const systemNotificationsOn = () => notifySupported && Notification.permission === 'granted';
+
+  // Hand a notification to the service worker if allowed, else keep an in-page timer.
+  function route(item) {
+    clearTimeout(item.timer);
+    const delay = Math.max(0, item.at - Date.now());
+    if (systemNotificationsOn()) {
+      pending = pending.filter((p) => p !== item);
+      navigator.serviceWorker.ready.then((reg) => reg.active.postMessage({ type: 'schedule', delay, ...item.n }));
+    } else {
+      item.timer = setTimeout(() => {
+        pending = pending.filter((p) => p !== item);
+        showToast(item.n);
+      }, delay);
+    }
+  }
+
+  function scheduleNotification(n, delay) {
+    const item = { at: Date.now() + delay, n };
+    pending.push(item);
+    route(item);
+  }
+
+  function scheduleDonationUpdates(zone, meals) {
+    scheduleNotification({
+      tag: `delivered-${zone.id}`,
+      zone: zone.id,
+      title: `Update from ${zone.name}`,
+      body: `The food distribution you helped fund has reached families in ${zone.name}. Thank you for your ${mealsText(meals)}! (Demo)`,
+    }, DEMO_DELAYS.delivered);
+    scheduleNotification({
+      tag: 'reward',
+      zone: zone.id,
+      title: `${REWARD.company} rewarded you`,
+      body: `${REWARD.company} has given you ${REWARD.amount} for donating. (Demo)`,
+    }, DEMO_DELAYS.reward);
+  }
+
+  async function enableNotifications() {
+    let result = 'denied';
+    try {
+      result = await Notification.requestPermission();
+    } catch {
+      // Older Safari only supports the callback form; treat as not granted.
+    }
+    if (result === 'granted') [...pending].forEach(route);
+    return result;
+  }
+
+  function notifyOptIn() {
+    if (notifySupported && Notification.permission === 'default') {
+      return '<button type="button" class="btn-ghost" data-act="notify">Notify me when it\'s delivered</button>';
+    }
+    if (systemNotificationsOn()) {
+      return '<p class="notify-note">You\'ll get a notification when there\'s news about your donation.</p>';
+    }
+    if (isIos && !isStandalone) {
+      return '<p class="notify-note">To get notifications on iPhone, add Strive to your Home Screen (Share → Add to Home Screen) and open it from there.</p>';
+    }
+    if (notifySupported && Notification.permission === 'denied') {
+      return '<p class="notify-note">Notifications are blocked in your browser settings, so updates will appear here in the app.</p>';
+    }
+    return '<p class="notify-note">Updates about your donation will appear here in the app.</p>';
+  }
+
+  const toasts = document.getElementById('toasts');
+
+  function showToast(n) {
+    const el = document.createElement('button');
+    el.type = 'button';
+    el.className = 'toast';
+    el.innerHTML = `
+      <img src="icons/icon-192.png" alt="">
+      <span class="toast-text">
+        <span class="toast-app">Strive · now</span>
+        <strong>${esc(n.title)}</strong>
+        <span>${esc(n.body)}</span>
+      </span>`;
+    const timer = setTimeout(() => el.remove(), 9000);
+    el.addEventListener('click', () => {
+      clearTimeout(timer);
+      el.remove();
+      if (n.zone) selectZone(n.zone);
+    });
+    toasts.append(el);
+  }
+
+  // Tapping a notification while the app is closed opens it at ?zone=<id>.
+  const startZone = new URLSearchParams(window.location.search).get('zone');
+  if (startZone && zoneById(startZone)) map.once('load', () => selectZone(startZone));
 
   // ---- Search (OpenStreetMap Nominatim) ----
   const searchForm = document.getElementById('search');
