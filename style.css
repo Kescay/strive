@@ -6,6 +6,9 @@
   --ink: #e8eefc;
   --ink-dim: #8d9ab8;
   --accent: #6fc3ff;
+  --panel-solid: rgba(12, 17, 28, 0.94);
+  --give: #3ddc97;
+  --give-ink: #03140c;
   --font-ui: "Instrument Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
   --font-data: "JetBrains Mono", ui-monospace, "SF Mono", Menlo, monospace;
   --gap: 10px;
@@ -17,6 +20,8 @@
 }
 
 * { box-sizing: border-box; }
+
+[hidden] { display: none !important; }
 
 html, body {
   height: 100%;
@@ -200,6 +205,224 @@ button:focus-visible, input:focus-visible {
 
 #hud-scale { color: var(--accent); }
 
+/* Pulsing zone markers */
+/* No position here: MapLibre positions markers absolutely, which also anchors ::after. */
+.zone-marker {
+  width: 16px;
+  height: 16px;
+  padding: 0;
+  border-radius: 50%;
+  background: var(--sev);
+  border: 2px solid #fff;
+  box-shadow: 0 0 10px var(--sev);
+}
+
+.zone-marker::after {
+  content: "";
+  position: absolute;
+  inset: -2px;
+  border-radius: 50%;
+  border: 2px solid var(--sev);
+  animation: zone-pulse 2s ease-out infinite;
+  pointer-events: none;
+}
+
+.zone-marker.is-selected { width: 22px; height: 22px; }
+
+.zone-marker:focus-visible { outline: 2px solid #fff; outline-offset: 3px; }
+
+@keyframes zone-pulse {
+  from { transform: scale(1); opacity: 0.9; }
+  to { transform: scale(3.2); opacity: 0; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .zone-marker::after { animation: none; transform: scale(1.8); opacity: 0.4; }
+}
+
+/* First-visit hint */
+.hint {
+  position: absolute;
+  top: calc(var(--edge-t) + 66px);
+  left: var(--edge-l);
+  margin: 0;
+  padding: 7px 12px;
+  border-radius: 999px;
+  background: var(--panel);
+  border: 1px solid var(--panel-line);
+  color: var(--ink);
+  font-size: 13px;
+  pointer-events: none;
+}
+
+/* Zone panel: side panel on desktop, bottom sheet on phones */
+.panel {
+  position: absolute;
+  top: calc(var(--edge-t) + 64px);
+  left: var(--edge-l);
+  width: min(380px, calc(100% - var(--edge-l) - var(--edge-r)));
+  max-height: calc(100% - var(--edge-t) - var(--edge-b) - 180px);
+  display: flex;
+  flex-direction: column;
+  background: var(--panel-solid);
+  border: 1px solid var(--panel-line);
+  border-radius: 14px;
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.45);
+  z-index: 5;
+}
+
+.panel-close {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  font-size: 22px;
+  line-height: 1;
+  color: var(--ink-dim);
+}
+
+.panel-close:hover { color: var(--ink); background: rgba(255, 255, 255, 0.06); }
+
+.panel-body {
+  overflow-y: auto;
+  padding: 18px 18px 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.panel h2 {
+  margin: 0;
+  padding-right: 32px;
+  font-size: 22px;
+  font-weight: 600;
+  line-height: 1.2;
+  text-wrap: balance;
+}
+
+.panel h3 {
+  margin: 6px 0 0;
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--ink-dim);
+}
+
+.panel p { margin: 0; }
+.panel .muted, .panel .region { color: var(--ink-dim); }
+.panel .region { margin-top: -6px; }
+.panel .summary { line-height: 1.55; }
+
+.back {
+  align-self: flex-start;
+  padding: 2px 0;
+  color: var(--accent);
+  font-weight: 500;
+}
+
+.zone-meta { display: flex; align-items: center; gap: 8px; padding-right: 32px; }
+.issue { color: var(--ink-dim); font-size: 13px; }
+
+.sev {
+  padding: 2px 8px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--sev);
+  background: color-mix(in srgb, var(--sev) 16%, transparent);
+  border: 1px solid color-mix(in srgb, var(--sev) 45%, transparent);
+}
+
+.needs { margin: 0; padding-left: 18px; display: grid; gap: 4px; }
+.needs li::marker { color: var(--accent); }
+
+.donate {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: 6px;
+  padding: 14px;
+  border-radius: 12px;
+  background: rgba(111, 195, 255, 0.07);
+  border: 1px solid var(--panel-line);
+}
+
+.donate h3 { margin: 0; }
+
+.amounts { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+
+.amount {
+  padding: 14px 0;
+  border-radius: 10px;
+  background: var(--give);
+  color: var(--give-ink);
+  font-size: 18px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  transition: transform 0.1s ease, filter 0.1s ease;
+}
+
+.amount:hover { filter: brightness(1.08); }
+.amount:active { transform: scale(0.97); }
+
+.confirm-text { font-size: 15px; }
+.confirm-row { display: flex; gap: 8px; }
+
+.btn-primary, .btn-ghost {
+  padding: 11px 16px;
+  border-radius: 10px;
+  font-weight: 600;
+}
+
+.btn-primary { flex: 1; background: var(--give); color: var(--give-ink); }
+.btn-ghost { border: 1px solid var(--panel-line); color: var(--ink); }
+
+.thanks {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 12px;
+  border-radius: 10px;
+  background: color-mix(in srgb, var(--give) 18%, transparent);
+}
+
+.thanks strong { color: var(--give); font-size: 16px; }
+
+.demo-note { font-size: 12px; color: var(--ink-dim); }
+.given { color: var(--give); font-weight: 500; }
+
+.zone-list { margin: 4px 0 0; padding: 0; list-style: none; display: grid; gap: 2px; }
+
+.zone-list button {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  padding: 10px 8px;
+  border-radius: 8px;
+  text-align: left;
+}
+
+.zone-list button:hover { background: rgba(255, 255, 255, 0.05); }
+
+.zone-dot {
+  flex: none;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: var(--sev);
+  box-shadow: 0 0 0 4px color-mix(in srgb, var(--sev) 22%, transparent);
+}
+
+.zone-name { flex: 1; min-width: 0; display: flex; flex-direction: column; font-weight: 500; }
+.zone-name small { color: var(--ink-dim); font-weight: 400; font-size: 12.5px; }
+.zone-given { color: var(--give); font-size: 13px; font-variant-numeric: tabular-nums; }
+
 /* MapLibre controls restyled to match */
 .maplibregl-ctrl-top-right { top: var(--edge-t); right: var(--edge-r); }
 .maplibregl-ctrl-top-right .maplibregl-ctrl { margin: 0 0 10px; }
@@ -240,4 +463,27 @@ button:focus-visible, input:focus-visible {
   .hud { gap: 2px 14px; }
   .hud .coords { display: none; }
   .maplibregl-ctrl-bottom-right { bottom: calc(var(--edge-b) + 96px); }
+
+  .hint { right: calc(var(--edge-r) + 44px); border-radius: 12px; }
+
+  .panel {
+    top: auto;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    width: auto;
+    max-height: 60%;
+    border-radius: 16px 16px 0 0;
+    border-bottom: 0;
+  }
+
+  .panel-body {
+    padding-left: max(18px, env(safe-area-inset-left, 0px));
+    padding-right: max(18px, env(safe-area-inset-right, 0px));
+    padding-bottom: max(20px, env(safe-area-inset-bottom, 0px));
+  }
+
+  body.panel-open .dock,
+  body.panel-open .hud,
+  body.panel-open .maplibregl-ctrl-bottom-right { visibility: hidden; }
 }

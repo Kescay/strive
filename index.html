@@ -30,9 +30,16 @@
     </div>
     <div class="actions">
       <button type="button" id="btn-globe" title="Zoom out to the whole planet">Globe</button>
-      <button type="button" id="btn-random" title="Fly to a famous city block">Surprise me</button>
+      <button type="button" id="btn-zones" title="List all zones that need help">Zones</button>
     </div>
   </div>
+
+  <p id="hint" class="hint">Tap a glowing zone to see what's happening and help.</p>
+
+  <aside id="panel" class="panel" hidden aria-label="Zone details">
+    <button type="button" id="panel-close" class="panel-close" aria-label="Close">×</button>
+    <div id="panel-body" class="panel-body"></div>
+  </aside>
 
   <footer class="hud" aria-live="polite">
     <div><span class="label">Scale</span><span id="hud-scale">Planet</span></div>
@@ -42,6 +49,7 @@
   </footer>
 
   <script src="https://cdn.jsdelivr.net/npm/maplibre-gl@5.24.0/dist/maplibre-gl.js"></script>
+  <script src="zones.js"></script>
   <script src="app.js"></script>
 </body>
 </html>
