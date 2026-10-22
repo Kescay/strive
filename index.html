@@ -1,0 +1,47 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Strive Earth</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/maplibre-gl@5.24.0/dist/maplibre-gl.css">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div id="map" aria-label="Interactive globe"></div>
+
+  <header class="topbar">
+    <div class="brand">Strive <span>Earth</span></div>
+    <form id="search" class="search" role="search" autocomplete="off">
+      <input id="search-input" type="search" placeholder="Search a city, address or landmark" aria-label="Search places">
+      <button type="submit" aria-label="Search">Go</button>
+      <ul id="results" class="results" hidden></ul>
+    </form>
+  </header>
+
+  <div class="dock">
+    <div class="layers" role="radiogroup" aria-label="Map style">
+      <button type="button" data-style="satellite" aria-pressed="true">Satellite</button>
+      <button type="button" data-style="hybrid" aria-pressed="false">Hybrid</button>
+      <button type="button" data-style="streets" aria-pressed="false">Streets</button>
+    </div>
+    <div class="actions">
+      <button type="button" id="btn-globe" title="Zoom out to the whole planet">Globe</button>
+      <button type="button" id="btn-random" title="Fly to a famous city block">Surprise me</button>
+    </div>
+  </div>
+
+  <footer class="hud" aria-live="polite">
+    <div><span class="label">Scale</span><span id="hud-scale">Planet</span></div>
+    <div><span class="label">View</span><span id="hud-width">–</span></div>
+    <div><span class="label">Zoom</span><span id="hud-zoom">–</span></div>
+    <div class="coords"><span class="label">Center</span><span id="hud-center">–</span></div>
+  </footer>
+
+  <script src="https://cdn.jsdelivr.net/npm/maplibre-gl@5.24.0/dist/maplibre-gl.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>

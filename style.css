@@ -1,0 +1,243 @@
+/* Full-bleed globe with floating glass panels: search on top, style switcher and HUD at the bottom. */
+:root {
+  --space: #05070d;
+  --panel: rgba(12, 17, 28, 0.78);
+  --panel-line: rgba(160, 190, 255, 0.16);
+  --ink: #e8eefc;
+  --ink-dim: #8d9ab8;
+  --accent: #6fc3ff;
+  --font-ui: "Instrument Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-data: "JetBrains Mono", ui-monospace, "SF Mono", Menlo, monospace;
+  --gap: 10px;
+  --edge-t: max(12px, env(safe-area-inset-top, 0px));
+  --edge-b: max(12px, env(safe-area-inset-bottom, 0px));
+  --edge-l: max(12px, env(safe-area-inset-left, 0px));
+  --edge-r: max(12px, env(safe-area-inset-right, 0px));
+  color-scheme: dark;
+}
+
+* { box-sizing: border-box; }
+
+html, body {
+  height: 100%;
+  margin: 0;
+  overflow: hidden;
+  background: var(--space);
+  color: var(--ink);
+  font: 14px/1.4 var(--font-ui);
+}
+
+/* Starfield behind the transparent map canvas, visible around the globe. */
+#map {
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(1px 1px at 12% 22%, #fff9 50%, transparent 51%),
+    radial-gradient(1px 1px at 68% 14%, #fff8 50%, transparent 51%),
+    radial-gradient(1.5px 1.5px at 84% 62%, #fffa 50%, transparent 51%),
+    radial-gradient(1px 1px at 33% 78%, #fff7 50%, transparent 51%),
+    radial-gradient(1px 1px at 52% 40%, #fff6 50%, transparent 51%),
+    radial-gradient(1.5px 1.5px at 22% 55%, #fff9 50%, transparent 51%),
+    radial-gradient(1px 1px at 91% 31%, #fff7 50%, transparent 51%),
+    radial-gradient(1px 1px at 6% 88%, #fff8 50%, transparent 51%),
+    radial-gradient(1px 1px at 76% 90%, #fff6 50%, transparent 51%),
+    radial-gradient(1px 1px at 44% 8%, #fff8 50%, transparent 51%),
+    radial-gradient(ellipse at 50% 50%, #0b1424 0%, var(--space) 70%);
+}
+
+button, input { font: inherit; color: inherit; }
+
+button {
+  cursor: pointer;
+  border: 0;
+  background: transparent;
+}
+
+button:focus-visible, input:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.topbar, .dock, .hud, .results {
+  background: var(--panel);
+  border: 1px solid var(--panel-line);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+}
+
+/* Top bar */
+.topbar {
+  position: absolute;
+  top: var(--edge-t);
+  left: var(--edge-l);
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 6px 6px 6px 14px;
+  border-radius: 12px;
+  width: min(520px, calc(100% - var(--edge-l) - var(--edge-r) - 56px));
+}
+
+.brand {
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  white-space: nowrap;
+}
+
+.brand span { color: var(--accent); }
+
+.search {
+  position: relative;
+  display: flex;
+  flex: 1;
+  min-width: 0;
+  gap: 4px;
+}
+
+.search input {
+  flex: 1;
+  min-width: 0;
+  padding: 8px 10px;
+  border-radius: 8px;
+  border: 1px solid transparent;
+  background: rgba(255, 255, 255, 0.06);
+}
+
+.search input::placeholder { color: var(--ink-dim); }
+
+.search button[type="submit"] {
+  padding: 0 14px;
+  border-radius: 8px;
+  background: var(--accent);
+  color: #04111d;
+  font-weight: 600;
+}
+
+.results {
+  position: absolute;
+  top: calc(100% + 10px);
+  left: 0;
+  right: 0;
+  margin: 0;
+  padding: 4px;
+  list-style: none;
+  border-radius: 10px;
+  max-height: 50vh;
+  overflow-y: auto;
+}
+
+.results button {
+  display: block;
+  width: 100%;
+  text-align: left;
+  padding: 8px 10px;
+  border-radius: 6px;
+}
+
+.results button:hover, .results button:focus-visible { background: rgba(111, 195, 255, 0.14); }
+
+.results .muted {
+  padding: 8px 10px;
+  color: var(--ink-dim);
+}
+
+/* Bottom dock: style switcher + actions */
+.dock {
+  position: absolute;
+  left: var(--edge-l);
+  bottom: calc(var(--edge-b) + 52px);
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--gap);
+  padding: 5px;
+  border-radius: 12px;
+}
+
+.layers, .actions { display: flex; gap: 2px; }
+
+.dock button {
+  padding: 7px 12px;
+  border-radius: 8px;
+  color: var(--ink-dim);
+  font-weight: 500;
+}
+
+.dock button:hover { color: var(--ink); }
+
+.layers button[aria-pressed="true"] {
+  background: rgba(111, 195, 255, 0.18);
+  color: var(--ink);
+}
+
+.actions { border-left: 1px solid var(--panel-line); padding-left: var(--gap); }
+
+/* HUD */
+.hud {
+  position: absolute;
+  left: var(--edge-l);
+  right: var(--edge-r);
+  bottom: var(--edge-b);
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 22px;
+  padding: 8px 14px;
+  border-radius: 12px;
+  font-family: var(--font-data);
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+  max-width: 720px;
+}
+
+.hud > div { display: flex; gap: 8px; white-space: nowrap; }
+
+.hud .label {
+  color: var(--ink-dim);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  font-size: 10.5px;
+  line-height: 18px;
+}
+
+#hud-scale { color: var(--accent); }
+
+/* MapLibre controls restyled to match */
+.maplibregl-ctrl-top-right { top: var(--edge-t); right: var(--edge-r); }
+.maplibregl-ctrl-top-right .maplibregl-ctrl { margin: 0 0 10px; }
+
+.maplibregl-ctrl-group {
+  background: var(--panel) !important;
+  border: 1px solid var(--panel-line);
+  box-shadow: none !important;
+}
+
+.maplibregl-ctrl-group button + button { border-top-color: var(--panel-line) !important; }
+.maplibregl-ctrl-group button .maplibregl-ctrl-icon { filter: invert(1) brightness(0.9); }
+
+.maplibregl-ctrl-bottom-right { bottom: calc(var(--edge-b) + 52px); right: var(--edge-r); }
+
+.maplibregl-ctrl-attrib {
+  background: var(--panel) !important;
+  color: var(--ink-dim);
+  font-size: 10.5px;
+}
+
+.maplibregl-ctrl-attrib a { color: var(--ink-dim) !important; }
+.maplibregl-ctrl-attrib-button { filter: invert(1); }
+
+@media (max-width: 640px) {
+  .brand { display: none; }
+  .topbar { padding-left: 6px; }
+  .dock {
+    right: var(--edge-r);
+    bottom: calc(var(--edge-b) + 46px);
+    flex-wrap: nowrap;
+    justify-content: space-between;
+    gap: 4px;
+    overflow-x: auto;
+  }
+  .dock button { padding: 7px 8px; font-size: 13px; white-space: nowrap; }
+  .actions { padding-left: 4px; }
+  .hud { gap: 2px 14px; }
+  .hud .coords { display: none; }
+  .maplibregl-ctrl-bottom-right { bottom: calc(var(--edge-b) + 96px); }
+}
